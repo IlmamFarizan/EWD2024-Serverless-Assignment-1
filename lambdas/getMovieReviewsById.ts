@@ -6,45 +6,47 @@ import {
   QueryCommandInput,
 } from "@aws-sdk/lib-dynamodb";
 
-function createQueryInput(
-  movieId: string,
-  minRating?: string,
-  reviewerName?: string
-): QueryCommandInput {
-  const expressionAttributeValues: any = { ":movieId": movieId };
-  let filterExpressions: string[] = [];
+// function createQueryInput(
+//   movieId: string,
+//   minRating?: string,
+//   reviewerName?: string
+// ): QueryCommandInput {
+//   const expressionAttributeValues: any = { ":movieId": movieId };
+//   let filterExpressions: string[] = [];
 
-  if (minRating) {
-    expressionAttributeValues[":minRating"] = parseInt(minRating);
-    filterExpressions.push("Rating > :minRating");
-  }
-  if (reviewerName) {
-    expressionAttributeValues[":reviewerName"] = reviewerName;
-    filterExpressions.push("ReviewerName = :reviewerName");
-  }
+//   if (minRating) {
+//     expressionAttributeValues[":minRating"] = parseInt(minRating);
+//     filterExpressions.push("Rating > :minRating");
+//   }
+//   if (reviewerName) {
+//     expressionAttributeValues[":reviewerName"] = reviewerName;
+//     filterExpressions.push("ReviewerName = :reviewerName");
+//   }
 
-  return {
-    TableName: process.env.TABLE_NAME!,
-    KeyConditionExpression: "MovieId = :movieId",
-    ExpressionAttributeValues: expressionAttributeValues,
-    FilterExpression: filterExpressions.join(" and ") || undefined,
-  };
-}
+//   return {
+//     TableName: process.env.TABLE_NAME!,
+//     KeyConditionExpression: "MovieId = :movieId",
+//     ExpressionAttributeValues: expressionAttributeValues,
+//     FilterExpression: filterExpressions.join(" and ") || undefined,
+//   };
+// }
+
+const ddbDocClient = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
-  if (!process.env.TABLE_NAME) {
-    console.error("Environment variable TABLE_NAME is not set.");
-    return {
-      statusCode: 500,
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ message: "Server configuration error" }),
-    };
-  }
+  //   if (!process.env.TABLE_NAME) {
+  //     console.error("Environment variable TABLE_NAME is not set.");
+  //     return {
+  //       statusCode: 500,
+  //       headers: { "content-type": "application/json" },
+  //       body: JSON.stringify({ message: "Server configuration error" }),
+  //     };
+  //   }
   try {
     console.log("Event: ", event);
     const movieId = event.pathParameters?.movieId;
     const minRating = event.queryStringParameters?.minRating;
-    const reviewerName = event.queryStringParameters?.reviewerName;
+    const reviewerName = event.pathParameters?.reviewerName;
     if (!movieId) {
       return {
         statusCode: 400,
@@ -55,7 +57,36 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       };
     }
 
-    const queryInput = createQueryInput(movieId, minRating, reviewerName);
+    const queryInput: QueryCommandInput = {
+      TableName: process.env.TABLE_NAME,
+      KeyConditionExpression: "MovieId = :movieId",
+      ExpressionAttributeValues: {
+        ":movieId": parseInt(movieId),
+        ...(minRating ? { ":minRating": parseInt(minRating) } : {}),
+        ...(reviewerName ? { ":reviewerName": reviewerName } : {}),
+      },
+    };
+
+    if (minRating) {
+      queryInput.FilterExpression +=
+        (queryInput.FilterExpression ? " and " : "") + "Rating > :minRating";
+    }
+    if (reviewerName) {
+      queryInput.FilterExpression +=
+        (queryInput.FilterExpression ? " and " : "") +
+        "Reviewername = :reviewerName";
+    }
+    if (!queryInput.FilterExpression) {
+      delete queryInput.FilterExpression;
+    }
+    if (reviewerName) {
+      queryInput.FilterExpression +=
+        (queryInput.FilterExpression ? " and " : "") +
+        "Reviewername = :reviewerName";
+    }
+    if (!queryInput.FilterExpression) {
+      delete queryInput.FilterExpression;
+    }
 
     const queryOutput = await ddbDocClient.send(new QueryCommand(queryInput));
 
@@ -90,8 +121,16 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   }
 };
 
-const ddbDocClient = createDDbDocClient();
-function createDDbDocClient(): DynamoDBDocumentClient {
+function createDDbDocClient() {
   const ddbClient = new DynamoDBClient({ region: process.env.REGION });
-  return DynamoDBDocumentClient.from(ddbClient);
+  const marshallOptions = {
+    convertEmptyValues: true,
+    removeUndefinedValues: true,
+    convertClassInstanceToMap: true,
+  };
+  const unmarshallOptions = {
+    wrapNumbers: false,
+  };
+  const translateConfig = { marshallOptions, unmarshallOptions };
+  return DynamoDBDocumentClient.from(ddbClient, translateConfig);
 }
