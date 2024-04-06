@@ -34,6 +34,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         ...(reviewerName ? { ":reviewerName": reviewerName } : {}),
         ...(year && { ":year": year }),
       },
+      FilterExpression: "",
     };
 
     if (minRating) {
@@ -45,14 +46,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         (queryInput.FilterExpression ? " and " : "") +
         "Reviewername = :reviewerName";
     }
-    if (!queryInput.FilterExpression) {
-      delete queryInput.FilterExpression;
-    }
-    if (reviewerName) {
-      queryInput.FilterExpression +=
-        (queryInput.FilterExpression ? " and " : "") +
-        "Reviewername = :reviewerName";
-    }
+
     if (year) {
       queryInput.FilterExpression +=
         (queryInput.FilterExpression ? " and " : "") +
