@@ -1,4 +1,4 @@
-import { Movie, MovieCast } from "../shared/types";
+import { Movie, MovieCast, MovieReviews } from "../shared/types";
 
 export const movies: Movie[] = [
   {
@@ -367,5 +367,15 @@ export const movieCasts: MovieCast[] = [
     actorName: "Joe Bloggs",
     roleName: "Male Character 1",
     roleDescription: "description of character 3",
+  },
+];
+
+export const movieReviews: MovieReviews[] = [
+  {
+    MovieId: 123,
+    Reviewername: "Fletcher",
+    ReviewDate: "2000-09-14",
+    Content: "Good movie, I recommend watching it!",
+    Rating: 9,
   },
 ];
