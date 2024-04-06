@@ -5,7 +5,6 @@ import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 const ddbDocClient = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
-  // Note change
   try {
     console.log("Event: ", event);
     const parameters = event?.pathParameters;
@@ -22,6 +21,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         body: JSON.stringify({ Message: "Missing movie Id" }),
       };
     }
+
+    const includeCast = event.queryStringParameters?.cast === "true";
 
     const commandOutput = await ddbDocClient.send(
       new GetCommand({
@@ -42,6 +43,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
     const body = {
       data: commandOutput.Item,
     };
+    let response: any = { data: body };
 
     // Return Response
     return {
