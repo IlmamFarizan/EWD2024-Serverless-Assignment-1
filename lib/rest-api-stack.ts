@@ -229,6 +229,20 @@ export class RestAPIStack extends cdk.Stack {
       }
     );
 
+    const getAllReviewsFn = new lambdanode.NodejsFunction(
+      this,
+      "GetAllReviewsFn",
+      {
+        architecture: lambda.Architecture.ARM_64,
+        runtime: lambda.Runtime.NODEJS_18_X,
+        entry: `${__dirname}/../lambdas/getAllReviews.ts`,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          REGION: "eu-west-1",
+        },
+      }
+    );
+
     // Permissions
     moviesTable.grantReadData(getMovieByIdFn);
     moviesTable.grantReadData(getAllMoviesFn);
@@ -241,6 +255,7 @@ export class RestAPIStack extends cdk.Stack {
     movieReviewsTable.grantReadWriteData(updateMovieReviewFn);
     movieReviewsTable.grantReadData(getMovieReviewsByYearFn);
     movieReviewsTable.grantReadData(getReviewsByNameFn);
+    movieReviewsTable.grantReadData(getAllReviewsFn);
 
     // REST API
     const api = new apig.RestApi(this, "RestAPI", {
@@ -303,6 +318,11 @@ export class RestAPIStack extends cdk.Stack {
     );
 
     const reviewEndpoint = api.root.addResource("reviews");
+    reviewEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(getAllReviewsFn, { proxy: true })
+    );
+
     const reviewerEndpoint = reviewEndpoint.addResource("{reviewerName}");
     reviewerEndpoint.addMethod(
       "GET",
