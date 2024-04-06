@@ -1,37 +1,46 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import Ajv from "ajv";
+import schema from "../shared/types.schema.json";
 
+const ajv = new Ajv();
+const isValidBodyParams = ajv.compile(schema.definitions["Review"] || {});
 const ddbDocClient = createDDbDocClient();
+
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   try {
     console.log("Event: ", event);
-    const body = event.body ? JSON.parse(event.body) : undefined;
-    if (
-      !body ||
-      typeof body.movieId !== "string" ||
-      typeof body.review !== "string" ||
-      !Array.isArray(body.rating) ||
-      body.rating.some((r) => typeof r !== "number")
-    ) {
+    const body = event.body
+      ? (JSON.parse(event.body) as Record<string, any>)
+      : undefined;
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
       return {
         statusCode: 400,
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "Missing or invalid request body" }),
+        body: JSON.stringify({ message: "Invalid request body" }),
       };
     }
 
-    await ddbDocClient.send(
+    if (!isValidBodyParams(body)) {
+      return {
+        statusCode: 400,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          message: `Incorrect type. Must match Review schema`,
+          schema: schema.definitions["Review"],
+        }),
+      };
+    }
+
+    const commandOutput = await ddbDocClient.send(
       new PutCommand({
         TableName: process.env.TABLE_NAME,
-        Item: {
-          movieId: body.movieId,
-          review: body.review,
-          rating: body.rating,
-          createdAt: new Date().toISOString(),
-        },
+        Item: body,
       })
     );
 
@@ -49,7 +58,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ error: "Failed to add new review" }),
     };
   }
 };
