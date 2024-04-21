@@ -208,7 +208,7 @@ export class AppApi extends Construct {
       {
         runtime: lambda.Runtime.NODEJS_18_X,
         handler: "handler",
-        entry: `${__dirname}/../lambdas/getReviewsByYear.ts`,
+        entry: `${__dirname}/../lambdas/getMovieReviewsByYear.ts`,
         environment: {
           TABLE_NAME: movieReviewsTable.tableName,
           REGION: "eu-west-1",
