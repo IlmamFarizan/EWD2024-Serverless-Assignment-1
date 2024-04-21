@@ -1,7 +1,7 @@
 Serverless REST Assignment.
 Name: Ilmam Farizan Auric
 
-Video demonstration:
+Video demonstration: https://youtu.be/wZPRGY4CpbM
 
 This repository contains an implementation of a serverless REST API for the AWS platform. The CDK framework is used to provision its infrastructure. The API's domain context is movie reviews.
 
@@ -26,16 +26,17 @@ API endpoints.
 - GET /reviews/{reviewerName}/{movieId}/translation?language=code - Get a translated version of a movie review using the movie ID and reviewer name as the identifier.
 
 API Gateway
-<img width="1275" alt="APIs" src="">
 
-<img width="1270" alt="API Gateway1" src="">
+Authorization API
+<img width="1275" alt="APIs" src="images/APIAuth.PNG">
 
-<img width="1280" alt="API Gateway2" src="">
+REST API
+<img width="1270" alt="API Gateway1" src="images/APIFunc1.PNG">
 
-<img width="1271" alt="API Gateway3" src="">
+<img width="1280" alt="API Gateway2" src="images/APIFunc2.PNG">
 
-Authentication.
-<img width="1278" alt="Authentication" src="">
+Postman Structuring
+<img width="1278" alt="Authentication" src="images/Postman Structuring.PNG">
 
-Independent learning (If relevant).
-<img width="1278" alt="Language Translation" src="">
+Independent learning.
+I could not get the translation API working as it keeps on returning 500 error. However, my code is there for this API.
