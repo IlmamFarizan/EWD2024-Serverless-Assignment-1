@@ -202,21 +202,21 @@ export const movieCasts: MovieCast[] = [
 export const movieReviews: MovieReviews[] = [
   {
     MovieId: 123,
-    Reviewername: "Fletcher",
+    ReviewerName: "Fletcher",
     ReviewDate: "2000-09-14",
     Content: "Good movie, I recommend watching it!",
     Rating: 9,
   },
   {
     MovieId: 456,
-    Reviewername: "Ilmam",
+    ReviewerName: "Ilmam",
     ReviewDate: "2000-10-15",
     Content: "Not Bad",
     Rating: 3,
   },
   {
     MovieId: 789,
-    Reviewername: "Reinaldo",
+    ReviewerName: "Reinaldo",
     ReviewDate: "2000-11-16",
     Content: "Nice movie!",
     Rating: 6,

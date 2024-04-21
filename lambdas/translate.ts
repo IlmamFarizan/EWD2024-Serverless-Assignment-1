@@ -64,11 +64,11 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
 
   const queryCommandInput: any = {
     TableName: process.env.TABLE_NAME,
-    IndexName: "Reviewername-MovieId-index",
+    IndexName: "ReviewerName-MovieId-index",
     KeyConditionExpression:
       "#reviewerName = :reviewerName AND #movieId = :movieId",
     ExpressionAttributeNames: {
-      "#reviewerName": "Reviewername",
+      "#reviewerName": "ReviewerName",
       "#movieId": "MovieId",
     },
     ExpressionAttributeValues: {

@@ -1,23 +1,18 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import {
-  DynamoDBDocumentClient,
-  QueryCommand,
-  QueryCommandInput,
-} from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 
 const ddbDocClient = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
   try {
     console.log("Event: ", event);
-    const movieId = event.pathParameters?.movieId;
-    const minRating = event.queryStringParameters?.minRating;
-    const reviewerName = event.queryStringParameters?.reviewerName;
+    const { movieId = "" } = event.pathParameters ?? {};
+    const reviewerNameOrYear = event.pathParameters?.reviewerName;
 
     if (!movieId) {
       return {
-        statusCode: 404,
+        statusCode: 400,
         headers: {
           "content-type": "application/json",
         },
@@ -25,32 +20,37 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       };
     }
 
-    const expressionAttributeValues = {
-      ":movieId": parseInt(movieId),
-    };
+    let queryInput;
 
-    let filterExpressions: string[] = [];
-
-    if (minRating) {
-      expressionAttributeValues[":minRating"] = parseInt(minRating);
-      filterExpressions.push("Rating > :minRating");
+    if (reviewerNameOrYear && /^\d{4}$/.test(reviewerNameOrYear)) {
+      queryInput = {
+        TableName: process.env.TABLE_NAME,
+        KeyConditionExpression: "MovieId = :movieId",
+        FilterExpression: "begins_with(ReviewDate, :year)",
+        ExpressionAttributeValues: {
+          ":movieId": parseInt(movieId),
+          ":year": reviewerNameOrYear,
+        },
+      };
+    } else if (reviewerNameOrYear) {
+      queryInput = {
+        TableName: process.env.TABLE_NAME,
+        KeyConditionExpression: "MovieId = :movieId",
+        FilterExpression: "ReviewerName = :reviewerName",
+        ExpressionAttributeValues: {
+          ":movieId": parseInt(movieId),
+          ":reviewerName": reviewerNameOrYear,
+        },
+      };
+    } else {
+      return {
+        statusCode: 400,
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ message: "Reviewer name or year is required" }),
+      };
     }
-
-    if (reviewerName) {
-      expressionAttributeValues[":reviewerName"] = reviewerName;
-      filterExpressions.push("ReviewerName = :reviewerName");
-    }
-
-    const filterExpression = filterExpressions.join(" AND ");
-
-    const queryInput: QueryCommandInput = {
-      TableName: process.env.TABLE_NAME,
-      KeyConditionExpression: "MovieId = :movieId",
-      ExpressionAttributeValues: expressionAttributeValues,
-      ...(filterExpressions.length > 0 && {
-        FilterExpression: filterExpression,
-      }),
-    };
 
     const queryOutput = await ddbDocClient.send(new QueryCommand(queryInput));
 
@@ -60,7 +60,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         headers: {
           "content-type": "application/json",
         },
-        body: JSON.stringify({ message: "No reviews found for this movie" }),
+        body: JSON.stringify({
+          message: "No reviews found for this movie by the specified reviewer",
+        }),
       };
     }
 
@@ -78,7 +80,9 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ error: "Failed to retrieve reviews" }),
+      body: JSON.stringify({
+        error: "Failed to retrieve reviews by the specified reviewer",
+      }),
     };
   }
 };

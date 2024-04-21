@@ -23,6 +23,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         body: JSON.stringify({ message: "Missing request body" }),
       };
     }
+
     if (!isValidBodyParams(body)) {
       return {
         statusCode: 500,
