@@ -1,5 +1,3 @@
-// export type Language = 'English' | 'Frenc
-
 export type Movie = {
   id: number;
   backdrop_path: string;
@@ -23,14 +21,12 @@ export type MovieCast = {
   roleName: string;
   roleDescription: string;
 };
-
 // Used to validate the query string og HTTP Get requests
 export type MovieCastMemberQueryParams = {
   movieId: string;
   actorName?: string;
   roleName?: string;
 };
-
 export type MovieReviews = {
   MovieId: number;
   Reviewername: string;
@@ -38,7 +34,6 @@ export type MovieReviews = {
   Content: string;
   Rating: number;
 };
-
 export type SignUpBody = {
   username: string;
   password: string;

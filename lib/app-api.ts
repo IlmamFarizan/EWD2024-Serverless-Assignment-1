@@ -8,6 +8,7 @@ import * as node from "aws-cdk-lib/aws-lambda-nodejs";
 import { generateBatch } from "../shared/util";
 import { movies, movieCasts, movieReviews } from "../seed/movies";
 import * as lambdanode from "aws-cdk-lib/aws-lambda-nodejs";
+import * as iam from "aws-cdk-lib/aws-iam";
 type AppApiProps = {
   userPoolId: string;
   userPoolClientId: string;
@@ -159,12 +160,12 @@ export class AppApi extends Construct {
       }
     );
 
-    const addMovieReviewsFn = new lambdanode.NodejsFunction(
+    const addMovieReviewFn = new lambdanode.NodejsFunction(
       this,
-      "AddMovieReviewsFn",
+      "AddMovieReviewFn",
       {
         architecture: lambda.Architecture.ARM_64,
-        runtime: lambda.Runtime.NODEJS_16_X,
+        runtime: lambda.Runtime.NODEJS_18_X,
         entry: `${__dirname}/../lambdas/addMovieReviews.ts`,
         timeout: cdk.Duration.seconds(10),
         memorySize: 128,
@@ -230,6 +231,7 @@ export class AppApi extends Construct {
         },
       }
     );
+
     const getReviewsByNameFn = new lambdanode.NodejsFunction(
       this,
       "GetReviewsByReviewerFn",
@@ -243,6 +245,37 @@ export class AppApi extends Construct {
         },
       }
     );
+    const translateServiceRole = new iam.Role(this, "TranslateServiceRole", {
+      assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "service-role/AWSLambdaBasicExecutionRole"
+        ),
+        iam.ManagedPolicy.fromAwsManagedPolicyName(
+          "AmazonDynamoDBReadOnlyAccess"
+        ),
+        iam.ManagedPolicy.fromAwsManagedPolicyName("TranslateReadOnly"),
+      ],
+    });
+
+    const getReviewTranslationFn = new node.NodejsFunction(
+      this,
+      "GetReviewTranslationFn",
+      {
+        runtime: lambda.Runtime.NODEJS_18_X,
+        role: translateServiceRole,
+        entry: `${__dirname}/../lambdas/translation.ts`,
+        environment: {
+          TABLE_NAME: movieReviewsTable.tableName,
+          TRANSLATE_SERVICE_ROLE: translateServiceRole.roleArn,
+          REGION: process.env.CDK_DEFAULT_REGION || "eu-west-1",
+        },
+      }
+    );
+    const translatePolicy = new iam.PolicyStatement({
+      actions: ["translate:TranslateText"],
+      resources: ["*"],
+    });
     // Permissions
     moviesTable.grantReadData(getMovieByIdFn);
     moviesTable.grantReadData(getAllMoviesFn);
@@ -250,12 +283,14 @@ export class AppApi extends Construct {
     moviesTable.grantReadWriteData(deleteMovieFn);
     movieCastsTable.grantReadData(getMovieCastMembersFn);
     movieCastsTable.grantReadData(getMovieByIdFn);
-    movieReviewsTable.grantReadWriteData(addMovieReviewsFn);
+    movieReviewsTable.grantReadWriteData(addMovieReviewFn);
     movieReviewsTable.grantReadData(getAllReviewsFn);
     movieReviewsTable.grantReadData(getMovieReviewsByIdFn);
-    movieReviewsTable.grantReadWriteData(updateMovieReviewFn);
     movieReviewsTable.grantReadData(getReviewsByYearFn);
+    movieReviewsTable.grantReadWriteData(updateMovieReviewFn);
     movieReviewsTable.grantReadData(getReviewsByNameFn);
+    getReviewTranslationFn.addToRolePolicy(translatePolicy);
+    movieReviewsTable.grantReadData(getReviewTranslationFn);
     const api = new apig.RestApi(this, "RestAPI", {
       description: "demo api",
       deployOptions: {
@@ -339,7 +374,7 @@ export class AppApi extends Construct {
     const reviewsEndpoint = moviesEndpoint.addResource("reviews");
     reviewsEndpoint.addMethod(
       "POST",
-      new apig.LambdaIntegration(addMovieReviewsFn, { proxy: true }),
+      new apig.LambdaIntegration(addMovieReviewFn, { proxy: true }),
       {
         authorizer: requestAuthorizer,
         authorizationType: apig.AuthorizationType.CUSTOM,
@@ -355,6 +390,13 @@ export class AppApi extends Construct {
     reviewerEndpoint.addMethod(
       "GET",
       new apig.LambdaIntegration(getReviewsByNameFn, { proxy: true })
+    );
+    const TranslationEndpoint = reviewerEndpoint
+      .addResource("{movieId}")
+      .addResource("translation");
+    TranslationEndpoint.addMethod(
+      "GET",
+      new apig.LambdaIntegration(getReviewTranslationFn)
     );
 
     const protectedRes = appApi.root.addResource("protected");

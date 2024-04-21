@@ -1,13 +1,18 @@
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, DeleteCommand } from "@aws-sdk/lib-dynamodb";
+import Ajv from "ajv";
+import schema from "../shared/types.schema.json";
+
+const ajv = new Ajv();
+const isValidBodyParams = ajv.compile(schema.definitions["Movie"] || {});
 
 const ddbDocClient = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
   try {
+    // Print Event
     console.log("Event: ", event);
-
     const parameters = event?.pathParameters;
     const movieId = parameters?.movieId
       ? parseInt(parameters.movieId)
@@ -29,14 +34,12 @@ export const handler: APIGatewayProxyHandlerV2 = async (event, context) => {
         Key: { id: movieId },
       })
     );
-
-    console.log("DeleteCommand response: ", commandOutput);
     return {
-      statusCode: 200,
+      statusCode: 201,
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ message: "Movie deleted successfully" }),
+      body: JSON.stringify({ message: "Movie deleted" }),
     };
   } catch (error: any) {
     console.log(JSON.stringify(error));

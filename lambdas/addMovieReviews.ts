@@ -6,6 +6,7 @@ import schema from "../shared/types.schema.json";
 
 const ajv = new Ajv();
 const isValidBodyParams = ajv.compile(schema.definitions["Review"] || {});
+
 const ddbDocClient = createDDbDocClient();
 
 export const handler: APIGatewayProxyHandlerV2 = async (event) => {
@@ -43,7 +44,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         Item: body,
       })
     );
-
     return {
       statusCode: 201,
       headers: {
@@ -51,14 +51,14 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       },
       body: JSON.stringify({ message: "Review added successfully" }),
     };
-  } catch (error: any) {
-    console.error(JSON.stringify(error));
+  } catch (error) {
+    console.error(error);
     return {
       statusCode: 500,
       headers: {
         "content-type": "application/json",
       },
-      body: JSON.stringify({ error: "Failed to add new review" }),
+      body: JSON.stringify({ error: "Failed to add review" }),
     };
   }
 };

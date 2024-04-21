@@ -24,7 +24,6 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         body: JSON.stringify({ message: "Movie ID is required in the path" }),
       };
     }
-
     const queryInput: QueryCommandInput = {
       TableName: process.env.TABLE_NAME,
       KeyConditionExpression: "MovieId = :movieId",
@@ -41,6 +40,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       queryInput.FilterExpression +=
         (queryInput.FilterExpression ? " and " : "") + "Rating > :minRating";
     }
+
     if (reviewerName) {
       queryInput.FilterExpression +=
         (queryInput.FilterExpression ? " and " : "") +
@@ -52,10 +52,10 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         (queryInput.FilterExpression ? " and " : "") +
         "begins_with(ReviewDate, :year)";
     }
+
     if (!queryInput.FilterExpression) {
       delete queryInput.FilterExpression;
     }
-
     const queryOutput = await ddbDocClient.send(new QueryCommand(queryInput));
 
     if (!queryOutput.Items || queryOutput.Items.length === 0) {
